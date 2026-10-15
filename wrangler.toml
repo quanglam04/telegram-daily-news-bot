@@ -1,0 +1,18 @@
+name = "daily-bot"
+main = "src/index.ts"
+compatibility_date = "2026-10-15"
+
+[triggers]
+crons = ["0 2 * * *"]   # 09:00 VN = 02:00 UTC, 1 lần/ngày
+
+[assets]
+directory = "./frontend"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "daily-bot-db"
+database_id = "4d2f8dec-e4a8-4aa8-99dd-207130d4616a"
+
+[vars]
+GROQ_BASE_URL = "https://api.groq.com/openai/v1"
+GROQ_MODEL = "llama-3.3-70b-versatile"

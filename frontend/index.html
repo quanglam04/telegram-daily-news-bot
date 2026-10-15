@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Daily Bot — Quản lý sự kiện</title>
+  <meta name="description" content="Hệ thống quản lý sự kiện và lịch nhắc nhở tự động qua Telegram." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <div class="app">
+    <!-- Header -->
+    <header class="header">
+      <div class="header-inner">
+        <div class="brand">
+          <div class="brand-badge">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+              <line x1="16" y1="2" x2="16" y2="6"></line>
+              <line x1="8" y1="2" x2="8" y2="6"></line>
+              <line x1="3" y1="10" x2="21" y2="10"></line>
+            </svg>
+          </div>
+          <div>
+            <h1 class="brand-title">Daily Bot</h1>
+            <p class="brand-subtitle">Quản lý sự kiện & lịch nhắc</p>
+          </div>
+        </div>
+        <div class="header-actions">
+          <button id="btn-recalc" class="btn btn-secondary" title="Đồng bộ các sự kiện lặp lại sang năm tiếp theo">
+            Đồng bộ năm mới
+          </button>
+          <button id="btn-preview" class="btn btn-secondary" title="Xem trước bản tin Telegram">
+            Xem bản tin
+          </button>
+          <button id="btn-send" class="btn btn-primary" title="Gửi bản tin ngay vào nhóm Telegram">
+            Gửi Telegram
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main content -->
+    <main class="main">
+      <!-- Stats -->
+      <section class="stats-bar" id="stats-bar">
+        <div class="stat-card">
+          <span class="stat-label">Tổng sự kiện</span>
+          <span class="stat-value" id="stat-total">0</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-label">Đang kích hoạt</span>
+          <span class="stat-value" id="stat-active">0</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-label">Cần nhắc hôm nay</span>
+          <span class="stat-value stat-highlight" id="stat-due">0</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-label">Trong 7 ngày tới</span>
+          <span class="stat-value" id="stat-upcoming">0</span>
+        </div>
+      </section>
+
+      <!-- Toolbar: filters + add -->
+      <section class="toolbar">
+        <div class="filter-group">
+          <button class="filter-btn active" data-filter="all">Tất cả</button>
+          <button class="filter-btn" data-filter="quota">Quota</button>
+          <button class="filter-btn" data-filter="holiday">Ngày lễ</button>
+          <button class="filter-btn" data-filter="personal">Cá nhân</button>
+          <button class="filter-btn" data-filter="deadline">Deadline</button>
+        </div>
+        <button id="btn-add" class="btn btn-primary">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+          Thêm sự kiện
+        </button>
+      </section>
+
+      <!-- Events table -->
+      <section class="table-wrapper">
+        <table class="events-table" id="events-table">
+          <thead>
+            <tr>
+              <th class="col-name">Tên sự kiện</th>
+              <th class="col-category">Phân loại</th>
+              <th class="col-date">Ngày dương</th>
+              <th class="col-countdown">Còn lại</th>
+              <th class="col-recurrence">Chu kỳ</th>
+              <th class="col-enabled">Trạng thái</th>
+              <th class="col-actions">Thao tác</th>
+            </tr>
+          </thead>
+          <tbody id="events-tbody">
+            <tr class="loading-row">
+              <td colspan="7">
+                <div class="spinner"></div>
+                <span>Đang tải dữ liệu...</span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="empty-state" id="empty-state" style="display: none;">
+          <p>Không có sự kiện nào trong danh mục này</p>
+          <button class="btn btn-secondary btn-sm" id="btn-add-empty">Tạo sự kiện mới</button>
+        </div>
+      </section>
+    </main>
+
+    <!-- Modal: Add/Edit Event -->
+    <div class="modal-overlay" id="modal-overlay">
+      <div class="modal" id="event-modal">
+        <div class="modal-header">
+          <h2 id="modal-title">Thêm sự kiện</h2>
+          <button class="modal-close" id="modal-close" type="button" aria-label="Đóng">&times;</button>
+        </div>
+        <form id="event-form" autocomplete="off">
+          <input type="hidden" id="event-id" />
+
+          <div class="form-row">
+            <div class="form-group flex-2">
+              <label for="event-name">Tên sự kiện <span class="required">*</span></label>
+              <input type="text" id="event-name" placeholder="VD: AntiGravity - trinhquanglam2k4" required />
+            </div>
+            <div class="form-group flex-1">
+              <label for="event-emoji">Biểu tượng</label>
+              <input type="text" id="event-emoji" value="📌" maxlength="4" />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group flex-1">
+              <label for="event-category">Phân loại</label>
+              <select id="event-category">
+                <option value="general">Chung</option>
+                <option value="quota">Quota tài khoản</option>
+                <option value="holiday">Ngày lễ</option>
+                <option value="personal">Cá nhân</option>
+                <option value="deadline">Hạn chót</option>
+              </select>
+            </div>
+            <div class="form-group flex-1">
+              <label for="event-recurrence">Chu kỳ lặp</label>
+              <select id="event-recurrence">
+                <option value="">Một lần</option>
+                <option value="yearly">Hằng năm</option>
+                <option value="monthly">Hằng tháng</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group flex-1">
+              <label for="event-target-date">Ngày đích <span class="required">*</span></label>
+              <input type="datetime-local" id="event-target-date" required />
+              <span class="form-hint" id="date-hint">Ngày Dương lịch (hệ thống lưu trữ và tính countdown theo ngày dương)</span>
+            </div>
+            <div class="form-group flex-half">
+              <label class="checkbox-label">
+                <input type="checkbox" id="event-is-lunar" />
+                <span class="checkmark"></span>
+                <span>Lịch âm</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group flex-1">
+              <label for="event-notify-days">Nhắc trước (ngày)</label>
+              <input type="text" id="event-notify-days" value="7,3,1,0" placeholder="7,3,1,0" />
+              <span class="form-hint">Danh sách các mốc ngày cách nhau bằng dấu phẩy</span>
+            </div>
+            <div class="form-group flex-half">
+              <label class="checkbox-label">
+                <input type="checkbox" id="event-enabled" checked />
+                <span class="checkmark"></span>
+                <span>Kích hoạt</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="event-metadata">Dữ liệu mở rộng (JSON)</label>
+            <textarea id="event-metadata" rows="2" placeholder='{"account": "abc@gmail.com"}'></textarea>
+          </div>
+
+          <div class="modal-actions">
+            <button type="button" class="btn btn-secondary" id="btn-cancel">Hủy</button>
+            <button type="submit" class="btn btn-primary" id="btn-save">
+              <span class="btn-loading-text">Lưu sự kiện</span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Preview Modal -->
+    <div class="modal-overlay" id="preview-overlay">
+      <div class="modal modal-lg" id="preview-modal">
+        <div class="modal-header">
+          <h2>Xem trước bản tin</h2>
+          <button class="modal-close" id="preview-close" type="button" aria-label="Đóng">&times;</button>
+        </div>
+        <div class="preview-body" id="preview-content">
+          <div class="spinner"></div> <span>Đang tạo bản tin...</span>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-secondary" id="preview-dismiss">Đóng</button>
+          <button type="button" class="btn btn-primary" id="preview-send">Gửi đến Telegram</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Toast container -->
+    <div class="toast-container" id="toast-container"></div>
+  </div>
+
+  <script src="/app.js"></script>
+</body>
+</html>
